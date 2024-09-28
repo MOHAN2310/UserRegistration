@@ -6,7 +6,7 @@ class Users(BaseModel):
     Username: str
     Password: str
     Name: str
-    Mobile: int 
+    email: str 
     dob: str
     Address: str = None
 

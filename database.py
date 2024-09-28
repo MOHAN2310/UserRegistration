@@ -1,11 +1,15 @@
+import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, Boolean
 
-URL_DATABASE = 'postgresql://postgres:Security%40123@localhost:5432/user-registration'
+load_dotenv('dev.env')
 
-engine = create_engine(URL_DATABASE)
+database_url = os.getenv('DATABASE_URL')
+
+engine = create_engine(database_url)
 
 sessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -19,6 +23,6 @@ class User(Base):
     Password = Column(String, unique=False, index=True)
     Name= Column(String, unique=False, index=True)
     email = Column(String, primary_key=True)
-    is_verified = Column(bool, default=False)
+    is_verified = Column(Boolean, default=False)
     dob= Column(String, unique=False, index=True)
     Address= Column(String, unique=False, index=True, nullable=True)

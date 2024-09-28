@@ -1,6 +1,7 @@
 import database
 from models import Users
 from database import engine, sessionLocal, User
+from mail import mail, create_message
 
 from sqlalchemy.orm import Session
 from fastapi import FastAPI, Depends
@@ -20,6 +21,17 @@ async def get_db() -> Session:
         db.close()
 
 
+@routes.post("/send_mail")
+async def send_mail(email: str):
+    html = "<h1>Welcome to Mera Mentor</h1>"
+    message = create_message(
+        recipients=[email],
+        subject="welcome",
+        body=html
+    )
+    await mail.send_message(message)
+    return {"message":"Email Sent Sucessfully"}
+
 @routes.get("/users")
 async def fetch_users_data(db: Session = Depends(get_db)):
     users = db.query(User).all()
@@ -33,7 +45,7 @@ async def register_user(user: Users, db: Session = Depends(get_db)):
         Username=user.Username,
         Password=user.Password,
         Name=user.Name,
-        Mobile=user.Mobile,
+        email=user.email,
         dob=user.dob,
         Address=user.Address
     )
