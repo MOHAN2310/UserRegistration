@@ -9,3 +9,6 @@ class Users(BaseModel):
     Mobile: int 
     dob: str
     Address: str = None
+
+    class Config:
+        from_attributes = True
