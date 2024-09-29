@@ -4,7 +4,7 @@ import database
 import pyotp
 import smtplib
 from models import Users, UserLoginModel
-from database import engine, sessionLocal, User
+from database import Profile, engine, sessionLocal, User
 from mail import mail, create_message
 from utils import get_user_by_email, user_exists, create_user, send_email_verify, verify_password
 from errors import UserAlreadyExists, InvalidCredentials
@@ -34,13 +34,27 @@ async def send_mail(email: str):
     totp = pyotp.TOTP(s=secret, interval=time_window)
     otp = totp.now()
     # await send_email_verify(email)
-    html = f"<h1>Subject:Email Verification OTP\n\nYour OTP for email verification in Trade Replicator is: {otp}</h1>"
+    html = f"<h1>Subject:Email Verification OTP\n\nYour OTP for email verification for user registration is: {otp}</h1>"
     message = create_message(
         recipients=[email],
         subject="Verify your email address",    
         body=html
     )
     await mail.send_message(message)
+    return {"message":"Email Sent Sucessfully"}
+
+@routes.post("/verify_mail/{email}/{OTP}")
+async def verify_mail(email: str, OTP: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
+    secret = user.profile.secret
+    time_window = 60 * 5
+    totp = pyotp.TOTP(s=secret, interval=time_window)
+
+    if totp.verify(OTP):
+        user.is_verified = True
+        db.add(user)
+        db.commit()
+        print("Email OTP has been verified succesfully", user.email)
     return {"message":"Email Sent Sucessfully"}
 
 
@@ -58,8 +72,10 @@ async def register_user(user: Users, db: Session = Depends(get_db)):
     if user_exist:
         print("User has provided an email for a user who exists during sign up.", email)
         raise UserAlreadyExists()
+    
+    secret = await send_email_verify(email)
 
-    user_data = await create_user(user=user, session=db)
+    user_data = await create_user(user=user, session=db, secret=secret)
     return {"message": "User registered successfully!", "user": user_data}
 
 

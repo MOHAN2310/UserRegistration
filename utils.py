@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
-from database import engine, sessionLocal, User
+from database import Profile, engine, sessionLocal, User
 from models import Users
 
 load_dotenv('dev.env')
@@ -17,7 +17,7 @@ MAIL_USERNAME= os.getenv('MAIL_USERNAME'),
 MAIL_PASSWORD=os.getenv('MAIL_PASSWORD'),
 MAIL_SERVER=str(os.getenv('MAIL_SERVER')),
 MAIL_PORT=int(587),
-MAIL_FROM="mohanraj.balajiv@gmail.com",
+MAIL_FROM=os.getenv('MAIL_FROM_EMAIL'),
 MAIL_FROM_NAME="MohanrajB"
 
 def generate_passwd_hash(password: str) -> str:
@@ -51,9 +51,8 @@ async def send_email_verify(email: str):
         with smtplib.SMTP(MAIL_SERVER[0], port=587) as connection:
             connection.starttls()
             connection.login(
-                user="mohanraj.balajiv@gmail.com",
+                user=MAIL_FROM[0],
                 password=MAIL_PASSWORD[0],
-                # password="Mohanrajb@12345"
             )
             connection.sendmail(
                 from_addr=MAIL_FROM[0],
@@ -63,19 +62,21 @@ async def send_email_verify(email: str):
         print(
             "Please check your email for the OTP to complete your registration.",
         )
+        return secret
     except Exception as e:
         print("Exception occured while sending email")
 
-async def create_user(user: Users, session: Session):
+async def create_user(user: Users, session: Session, secret: str):
         user_data = User(
             Username=user.Username,
-            # Password=user.Password,
             Name=user.Name,
             email=user.email,
             dob=user.dob,
             Address=user.Address
         )
         user_data.Password = generate_passwd_hash(user.Password)
+        profile = Profile(secret=secret)
+        user_data.profile = profile
         session.add(user_data)
         session.commit()
         return user_data
