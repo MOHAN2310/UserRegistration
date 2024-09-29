@@ -1,4 +1,3 @@
-from fastapi import Path 
 from pydantic import BaseModel, Field
 
 
@@ -16,3 +15,10 @@ class Users(BaseModel):
 class UserLoginModel(BaseModel):
     email: str = Field(max_length=40)
     password: str = Field(min_length=6)
+
+class UserResponse(BaseModel):
+    Username: str 
+    email: str
+    Name: str
+    dob: str
+    Address: str | None = None 

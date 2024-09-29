@@ -1,6 +1,9 @@
 import os
 import smtplib
 import pyotp
+import jwt
+import uuid
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
@@ -13,12 +16,14 @@ passwd_context = CryptContext(schemes=["bcrypt"])
 
 ACCESS_TOKEN_EXPIRY = 3600
 
-MAIL_USERNAME= os.getenv('MAIL_USERNAME'),
-MAIL_PASSWORD=os.getenv('MAIL_PASSWORD'),
-MAIL_SERVER=str(os.getenv('MAIL_SERVER')),
-MAIL_PORT=int(587),
-MAIL_FROM=os.getenv('MAIL_FROM_EMAIL'),
+MAIL_USERNAME= os.getenv('MAIL_USERNAME')
+MAIL_PASSWORD=os.getenv('MAIL_PASSWORD')
+MAIL_SERVER=str(os.getenv('MAIL_SERVER'))
+MAIL_PORT=int(587)
+MAIL_FROM=os.getenv('MAIL_FROM_EMAIL')
 MAIL_FROM_NAME="MohanrajB"
+JWT_SECRET=os.getenv('JWT_SECRET')
+JWT_ALGORITHM=os.getenv('JWT_ALGO')
 
 def generate_passwd_hash(password: str) -> str:
     hash = passwd_context.hash(password)
@@ -80,3 +85,35 @@ async def create_user(user: Users, session: Session, secret: str):
         session.add(user_data)
         session.commit()
         return user_data
+
+def create_access_token(
+    user_data: dict, expiry: timedelta = None, refresh: bool = False
+):
+    payload = {}
+
+    payload["user"] = user_data
+    payload["exp"] = datetime.now() + (
+        expiry if expiry is not None else timedelta(seconds=ACCESS_TOKEN_EXPIRY)
+    )
+    payload["jti"] = str(uuid.uuid4())
+
+    payload["refresh"] = refresh
+
+    token = jwt.encode(
+        payload=payload, key=JWT_SECRET, algorithm=JWT_ALGORITHM
+    )
+
+    return token
+
+
+def decode_token(token: str) -> dict:
+    try:
+        token_data = jwt.decode(
+            jwt=token, key=JWT_SECRET, algorithms=[JWT_ALGORITHM]
+        )
+
+        return token_data
+
+    except jwt.PyJWTError as e:
+        print("Exception while decoding the token")
+        return None

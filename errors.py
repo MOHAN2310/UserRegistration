@@ -10,6 +10,7 @@ class UserException(Exception):
 
 class UserAlreadyExists(Exception):
     """User has provided an email for a user who exists during sign up."""
+    pass
      
 class InvalidCredentials(Exception):
     """User has provided wrong email or password during log in."""

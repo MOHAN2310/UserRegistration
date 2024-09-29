@@ -2,16 +2,17 @@ from fastapi.responses import JSONResponse
 import uvicorn
 import database
 import pyotp
-import smtplib
-from models import Users, UserLoginModel
-from database import Profile, engine, sessionLocal, User
+from models import Users, UserLoginModel, UserResponse
+from database import engine, sessionLocal, User
 from mail import mail, create_message
-from utils import get_user_by_email, user_exists, create_user, send_email_verify, verify_password
+from utils import create_access_token, get_user_by_email, user_exists, create_user, send_email_verify, verify_password
 from errors import UserAlreadyExists, InvalidCredentials
 
 from sqlalchemy.orm import Session
 from fastapi import FastAPI, Depends
-from typing import Annotated
+from datetime import timedelta
+
+REFRESH_TOKEN_EXPIRY = 2
 
 user_list = []
 
@@ -34,7 +35,7 @@ async def send_mail(email: str):
     totp = pyotp.TOTP(s=secret, interval=time_window)
     otp = totp.now()
     # await send_email_verify(email)
-    html = f"<h1>Subject:Email Verification OTP\n\nYour OTP for email verification for user registration is: {otp}</h1>"
+    html = f"<h1>Email Verification OTP\n\nYour OTP for email verification for user registration is: {otp}</h1>"
     message = create_message(
         recipients=[email],
         subject="Verify your email address",    
@@ -42,6 +43,7 @@ async def send_mail(email: str):
     )
     await mail.send_message(message)
     return {"message":"Email Sent Sucessfully"}
+
 
 @routes.post("/verify_mail/{email}/{OTP}")
 async def verify_mail(email: str, OTP: str, db: Session = Depends(get_db)):
@@ -55,13 +57,20 @@ async def verify_mail(email: str, OTP: str, db: Session = Depends(get_db)):
         db.add(user)
         db.commit()
         print("Email OTP has been verified succesfully", user.email)
-    return {"message":"Email Sent Sucessfully"}
+    return {"message":"Verified mail Sucessfully"}
 
 
 @routes.get("/users")
 async def fetch_users_data(db: Session = Depends(get_db)):
     users = db.query(User).all()
-    return users
+    user_data = [UserResponse(
+        Username=user.Username,
+        email=user.email,
+        Name=user.Name,
+        dob=user.dob,
+        Address=user.Address
+    ) for user in users]
+    return user_data
 
 
 @routes.post("/signup")
@@ -74,7 +83,7 @@ async def register_user(user: Users, db: Session = Depends(get_db)):
         raise UserAlreadyExists()
     
     secret = await send_email_verify(email)
-
+    print("Please check your email for the OTP to complete your registration.", user.email)
     user_data = await create_user(user=user, session=db, secret=secret)
     return {"message": "User registered successfully!", "user": user_data}
 
@@ -85,24 +94,40 @@ async def login_users(
 ):
     email = login_data.email
     password = login_data.password
-
     user = await get_user_by_email(email, db)
-
+    print("Intiating sign in for the user", user.Username)
     if user is not None and user.is_verified:
         password_valid = verify_password(password, user.Password)
         if password_valid:
-            message = "Login successful"
+            print("Sucessfully verified the password for the user", user.Username)
+            message = "Login successfull"
+            access_token = create_access_token(
+                user_data={
+                    "email": user.email,
+                    "user_uid": str(user.reference),
+                }
+            )
+            refresh_token = create_access_token(
+                user_data={"email": user.email, "user_uid": str(user.reference)},
+                refresh=True,
+                expiry=timedelta(days=REFRESH_TOKEN_EXPIRY),
+            )
         else:
             message = "Login failed due to invalid creadentials"
 
         return JSONResponse(
             content={
                 "message": message,
-                "user": {"email": user.email,},
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "user": {"email": user.email, "uid": str(user.reference)},
             }
         )
-
     raise InvalidCredentials()
+
+@routes.post("/logout")
+async def logout():
+    return {"msg": "Logged out successfully"}
 
 
 if __name__ == "__main__":

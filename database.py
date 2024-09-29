@@ -1,9 +1,10 @@
+import uuid
 import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, UUID
 
 load_dotenv('dev.env')
 
@@ -18,7 +19,7 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True) 
+    reference=Column(UUID, nullable=False, primary_key=True, default=uuid.uuid4)
     Username = Column(String, unique=True, index=True)
     Password = Column(String, unique=False, index=True)
     Name= Column(String, unique=False, index=True)
@@ -32,8 +33,7 @@ class Profile(Base):
     __tablename__ = "profile"
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_reference = Column(UUID, ForeignKey("users.reference"), nullable=False)
     secret = Column(String(32), nullable=True)
-    # is_verified = Column(Boolean, default=False)
 
     user = relationship("User", back_populates="profile")
