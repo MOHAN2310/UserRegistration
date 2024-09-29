@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from datetime import date
 
 
 class Users(BaseModel):
@@ -6,7 +7,7 @@ class Users(BaseModel):
     Password: str = Field(min_length=6)
     Name: str
     email: str 
-    dob: str
+    dob: date
     Address: str = None
 
     class Config:
@@ -20,5 +21,5 @@ class UserResponse(BaseModel):
     Username: str 
     email: str
     Name: str
-    dob: str
+    dob: date
     Address: str | None = None 

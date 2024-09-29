@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, UUID
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, UUID, DATE
 
 load_dotenv('dev.env')
 
@@ -25,7 +25,7 @@ class User(Base):
     Name= Column(String, unique=False, index=True)
     email = Column(String, unique=True, index=True)
     is_verified = Column(Boolean, default=False)
-    dob= Column(String, unique=False, index=True)
+    dob= Column(DATE, unique=False, index=True)
     Address= Column(String, unique=False, index=True, nullable=True)
     profile = relationship("Profile", back_populates="user", uselist=False)
 
