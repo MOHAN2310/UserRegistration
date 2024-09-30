@@ -5,7 +5,7 @@ import pyotp
 from models import Users, UserLoginModel, UserResponse
 from database import engine, sessionLocal, User
 from mail import mail, create_message
-from utils import create_access_token, get_user_by_email, user_exists, create_user, send_email_verify, verify_password
+from utils import create_access_token, decode_token, get_user_by_email, user_exists, create_user, send_email_verify, verify_password
 from errors import UserAlreadyExists, InvalidCredentials
 
 from sqlalchemy.orm import Session
@@ -126,8 +126,12 @@ async def login_users(
     raise InvalidCredentials()
 
 @routes.post("/logout")
-async def logout():
-    return {"msg": "Logged out successfully"}
+async def logout(token: str):
+    logout_user = decode_token(token=token)
+    msg = "Log out failed"
+    if logout_user:
+        msg = "Logged out successfully"
+    return {"msg": msg}
 
 
 if __name__ == "__main__":

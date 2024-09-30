@@ -25,6 +25,8 @@ MAIL_FROM_NAME="MohanrajB"
 JWT_SECRET=os.getenv('JWT_SECRET')
 JWT_ALGORITHM=os.getenv('JWT_ALGO')
 
+blacklist = set()
+
 def generate_passwd_hash(password: str) -> str:
     hash = passwd_context.hash(password)
 
@@ -111,9 +113,19 @@ def decode_token(token: str) -> dict:
         token_data = jwt.decode(
             jwt=token, key=JWT_SECRET, algorithms=[JWT_ALGORITHM]
         )
+        blacklist.add(token_data['jti'])
 
         return token_data
 
     except jwt.PyJWTError as e:
         print("Exception while decoding the token")
         return None
+
+def is_token_blacklisted(token):
+    try:
+        token_data = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return token_data['jti'] in blacklist
+    except jwt.ExpiredSignatureError:
+        return True  
+    except jwt.InvalidTokenError:
+        return True
